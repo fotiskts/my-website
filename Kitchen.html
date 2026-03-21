@@ -1,0 +1,104 @@
+<<!DOCTYPE html>
+<html>
+<head>
+    <title>Kitchen Screen</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #111;
+            color: white;
+        }
+
+        .order {
+            border: 2px solid white;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Kitchen Orders</h1>
+
+<!-- ✅ LOADER -->
+<div id="loader" style="display:none;">Loading...</div>
+
+<!-- ✅ ORDERS -->
+<div id="orders"></div>
+
+<script>
+function loadOrders(){
+
+    const container = document.getElementById("orders");
+
+    fetch("https://app1-backend-production-7e08.up.railway.app/orders")
+    .then(res => res.json())
+    .then(data => {
+
+        console.log("DATA:", data);
+
+        container.innerHTML = "";
+
+        if(!data || data.length === 0){
+            container.innerHTML = "<h2>No Orders</h2>";
+            return;
+        }
+
+        // 🔥 GROUP BY TABLE
+        let tables = {};
+
+        data.forEach(item => {
+
+            let table = item.tableNumber ?? "Unknown";
+
+            if(!tables[table]){
+                tables[table] = [];
+            }
+
+            // 👉 ΧΡΗΣΙΜΟΠΟΙΕΙΣ product_name (ΟΧΙ products!)
+            tables[table].push(
+                item.productName + " x" + item.quantity
+            );
+        });
+
+        // 🔥 CREATE UI
+        for(let table in tables){
+
+            let div = document.createElement("div");
+            div.className = "order";
+
+            let productsList = tables[table]
+                .map(p => `<li>${p}</li>`)
+                .join("");
+
+            div.innerHTML = `
+                <h2>Table ${table}</h2>
+                <ul>${productsList}</ul>
+                <button onclick="markReady(${table})">Ready</button>
+            `;
+
+            container.appendChild(div);
+        }
+
+    })
+    .catch(err => console.log(err));
+}
+
+// ✅ READY BUTTON
+function markReady(tableNumber){
+    fetch("https://app1-backend-production-7e08.up.railway.app/orders/table/" + tableNumber, {
+        method: "DELETE"
+    })
+    .then(() => loadOrders());
+}
+
+// ✅ CALL FUNCTION
+loadOrders();
+
+// 🔄 AUTO REFRESH
+setInterval(loadOrders, 3000);
+</script>
+
+</body>
+</html>
