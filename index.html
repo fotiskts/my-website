@@ -66,12 +66,13 @@ function login(){
         return res.json();
     })
     .then(data => {
+        
 
     
         localStorage.setItem("adminId", data.adminId);
         localStorage.setItem("role", data.role);
 
-      if(data.role === "admin"){
+      if(data.role && data.role.toLowerCase() === "admin"){
             window.location.href = "Kitchen.html";
     }else {
         alert("Only admin allowed");
