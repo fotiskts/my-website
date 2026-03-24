@@ -1,102 +1,134 @@
-<<!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Kitchen Screen</title>
+    <meta charset="UTF-8">
+    <title>Kitchen Display System</title>
     <style>
+        :root {
+            --bg: #0d1117;
+            --card-bg: #161b22;
+            --accent: #2980b9; /* New Blue */
+            --highlight: #3498db;
+            --text: #ecf0f1;
+        }
         body {
-            font-family: Arial;
-            background: #111;
-            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #30363d;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        h1 { margin: 0; font-size: 24px; color: var(--highlight); letter-spacing: 1px; }
+        
+        #orders {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
         }
 
-        .order {
-            border: 2px solid white;
-            padding: 15px;
-            margin: 10px;
-            border-radius: 10px;
+        .order-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            border-top: 5px solid var(--highlight);
         }
+
+        .order-header {
+            padding: 15px;
+            background: #21262d;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .order-header h2 { margin: 0; font-size: 18px; color: var(--highlight); }
+
+        .order-body { padding: 15px; flex-grow: 1; }
+
+        ul { list-style: none; padding: 0; margin: 0; }
+        li {
+            padding: 10px 0;
+            border-bottom: 1px solid #30363d;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .qty-badge { color: var(--highlight); font-weight: bold; margin-left: 5px; }
+
+        .ready-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            text-transform: uppercase;
+            transition: background 0.2s;
+        }
+        .ready-btn:hover { background: var(--highlight); }
     </style>
 </head>
 <body>
 
-<h1>Kitchen Orders</h1>
+<header>
+    <h1>KITCHEN DISPLAY</h1>
+    <div id="status" style="font-size: 14px; opacity: 0.8;">NETWORK STATUS: <span style="color:#2ecc71;">ONLINE</span></div>
+</header>
 
-<!-- ✅ LOADER -->
-<div id="loader" style="display:none;">Loading...</div>
-
-<!-- ✅ ORDERS -->
 <div id="orders"></div>
 
 <script>
 function loadOrders(){
-
     const container = document.getElementById("orders");
-
     fetch("https://app1-backend-production-7e08.up.railway.app/orders")
     .then(res => res.json())
     .then(data => {
-
-        console.log("DATA:", data);
-
         container.innerHTML = "";
-
         if(!data || data.length === 0){
-            container.innerHTML = "<h2>No Orders</h2>";
+            container.innerHTML = "<h2 style='grid-column: 1/-1; text-align:center; opacity: 0.3; margin-top: 50px;'>NO PENDING ORDERS</h2>";
             return;
         }
 
-        // 🔥 GROUP BY TABLE
         let tables = {};
-
         data.forEach(item => {
-
-            let table = item.tableNumber ?? "Unknown";
-
-            if(!tables[table]){
-                tables[table] = [];
-            }
-
-            // 👉 ΧΡΗΣΙΜΟΠΟΙΕΙΣ product_name (ΟΧΙ products!)
-            tables[table].push(
-                item.productName + " x" + item.quantity
-            );
+            let table = item.tableNumber ?? "N/A";
+            if(!tables[table]) tables[table] = [];
+            tables[table].push({name: item.productName, qty: item.quantity});
         });
 
-        // 🔥 CREATE UI
         for(let table in tables){
-
             let div = document.createElement("div");
-            div.className = "order";
-
-            let productsList = tables[table]
-                .map(p => `<li>${p}</li>`)
-                .join("");
+            div.className = "order-card";
+            let productsHTML = tables[table].map(p => `<li>${p.name} <span class="qty-badge">x${p.qty}</span></li>`).join("");
 
             div.innerHTML = `
-                <h2>Table ${table}</h2>
-                <ul>${productsList}</ul>
-                <button onclick="markReady(${table})">Ready</button>
+                <div class="order-header"><h2>TABLE ${table}</h2></div>
+                <div class="order-body"><ul>${productsHTML}</ul></div>
+                <button class="ready-btn" onclick="markReady('${table}')">Complete Order</button>
             `;
-
             container.appendChild(div);
         }
-
     })
-    .catch(err => console.log(err));
+    .catch(err => console.error("Update failed:", err));
 }
 
-// ✅ READY BUTTON
 function markReady(tableNumber){
-    fetch("https://app1-backend-production-7e08.up.railway.app/orders/table/" + tableNumber, {
-        method: "DELETE"
-    })
+    fetch("https://app1-backend-production-7e08.up.railway.app/orders/table/" + tableNumber, { method: "DELETE" })
     .then(() => loadOrders());
 }
 
-// ✅ CALL FUNCTION
 loadOrders();
-
-// 🔄 AUTO REFRESH
 setInterval(loadOrders, 3000);
 </script>
 
