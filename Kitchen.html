@@ -88,49 +88,101 @@
 
 <div id="orders"></div>
 
+```html
 <script>
+
+const API = "https://app1-backend-production-7e08.up.railway.app";
+
+// 🔐 AUTH CHECK
+const token = localStorage.getItem("token");
+
+if(!token){
+    window.location.href = "index.html";
+}
+
+// ✅ CHECK ROLE
+try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if(payload.role !== "ADMIN"){
+        alert("Admins only");
+        localStorage.clear();
+        window.location.href = "index.html";
+    }
+} catch(e){
+    localStorage.clear();
+    window.location.href = "index.html";
+}
+
+// 🍽️ LOAD ORDERS
 function loadOrders(){
+
     const container = document.getElementById("orders");
-    fetch("https://app1-backend-production-7e08.up.railway.app/orders")
-    .then(res => res.json())
+
+    fetch(API + "/orders", {
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    })
+    .then(res => {
+
+        if(res.status === 401 || res.status === 403){
+            localStorage.clear();
+            window.location.href = "index.html";
+            return;
+        }
+
+        return res.json();
+    })
     .then(data => {
+
+        if(!data) return;
+
         container.innerHTML = "";
-        if(!data || data.length === 0){
-            container.innerHTML = "<h2 style='grid-column: 1/-1; text-align:center; opacity: 0.3; margin-top: 50px;'>NO PENDING ORDERS</h2>";
+
+        if(data.length === 0){
+            container.innerHTML =
+                "<h2 style='grid-column: 1/-1; text-align:center; opacity: 0.3; margin-top: 50px;'>NO PENDING ORDERS</h2>";
             return;
         }
 
         let tables = {};
+
         data.forEach(item => {
             let table = item.tableNumber ?? "N/A";
+
             if(!tables[table]) tables[table] = [];
-            tables[table].push({name: item.productName, qty: item.quantity});
+
+            tables[table].push({
+                name: item.productName,
+                qty: item.quantity
+            });
         });
 
         for(let table in tables){
+
             let div = document.createElement("div");
             div.className = "order-card";
-            let productsHTML = tables[table].map(p => `<li>${p.name} <span class="qty-badge">x${p.qty}</span></li>`).join("");
+
+            let productsHTML = tables[table]
+                .map(p => `<li>${p.name} <span class="qty-badge">x${p.qty}</span></li>`)
+                .join("");
 
             div.innerHTML = `
                 <div class="order-header"><h2>TABLE ${table}</h2></div>
                 <div class="order-body"><ul>${productsHTML}</ul></div>
-                <button class="ready-btn" onclick="markReady('${table}')">Complete Order</button>
             `;
+
             container.appendChild(div);
         }
     })
-    .catch(err => console.error("Update failed:", err));
-}
-
-function markReady(tableNumber){
-    fetch("https://app1-backend-production-7e08.up.railway.app/orders/table/" + tableNumber, { method: "DELETE" })
-    .then(() => loadOrders());
+    .catch(err => console.error("Fetch error:", err));
 }
 
 loadOrders();
 setInterval(loadOrders, 3000);
+
 </script>
+
 
 </body>
 </html>

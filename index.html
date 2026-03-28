@@ -70,21 +70,26 @@
 </div>
 
 <script>
-/* JS Logic remains exactly the same as previous version */
 function login(){
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
+
     fetch("https://app1-backend-production-7e08.up.railway.app/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
     })
-    .then(res => { if(!res.ok) throw new Error("Wrong credentials"); return res.json(); })
+    .then(res => {
+        if(!res.ok) throw new Error("Wrong credentials");
+        return res.json();
+    })
     .then(data => {
-        localStorage.setItem("adminId", data.adminId);
-        localStorage.setItem("role", data.role);
-        if(data.role.toLowerCase() === "admin"){ window.location.href = "Kitchen.html"; }
-        else { alert("Only admin allowed"); }
+
+        // ✅ ΑΠΟΘΗΚΕΥΣΗ TOKEN
+        localStorage.setItem("token", data.token);
+
+        // 👉 redirect
+        window.location.href = "Kitchen.html";
     })
     .catch(err => alert("Λάθος username ή password"));
 }
