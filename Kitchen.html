@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,10 +8,11 @@
         :root {
             --bg: #0d1117;
             --card-bg: #161b22;
-            --accent: #2980b9; /* New Blue */
+            --accent: #2980b9;
             --highlight: #3498db;
             --text: #ecf0f1;
         }
+
         body {
             font-family: 'Segoe UI', sans-serif;
             background: var(--bg);
@@ -18,6 +20,7 @@
             margin: 0;
             padding: 20px;
         }
+
         header {
             display: flex;
             justify-content: space-between;
@@ -26,8 +29,13 @@
             padding-bottom: 10px;
             margin-bottom: 20px;
         }
-        h1 { margin: 0; font-size: 24px; color: var(--highlight); letter-spacing: 1px; }
-        
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            color: var(--highlight);
+        }
+
         #orders {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -40,50 +48,53 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
             border-top: 5px solid var(--highlight);
         }
 
         .order-header {
             padding: 15px;
             background: #21262d;
-            border-bottom: 1px solid #30363d;
         }
 
-        .order-header h2 { margin: 0; font-size: 18px; color: var(--highlight); }
+        .order-body {
+            padding: 15px;
+        }
 
-        .order-body { padding: 15px; flex-grow: 1; }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
 
-        ul { list-style: none; padding: 0; margin: 0; }
         li {
-            padding: 10px 0;
+            padding: 8px 0;
             border-bottom: 1px solid #30363d;
-            font-size: 18px;
-            font-weight: 500;
         }
 
-        .qty-badge { color: var(--highlight); font-weight: bold; margin-left: 5px; }
+        .qty-badge {
+            color: var(--highlight);
+            font-weight: bold;
+        }
 
         .ready-btn {
             background: var(--accent);
             color: white;
             border: none;
-            padding: 15px;
-            font-weight: bold;
+            padding: 12px;
             cursor: pointer;
-            width: 100%;
-            font-size: 16px;
-            text-transform: uppercase;
-            transition: background 0.2s;
+            font-weight: bold;
+            transition: 0.2s;
         }
-        .ready-btn:hover { background: var(--highlight); }
+
+        .ready-btn:hover {
+            background: var(--highlight);
+        }
     </style>
 </head>
+
 <body>
 
 <header>
     <h1>KITCHEN DISPLAY</h1>
-    <div id="status" style="font-size: 14px; opacity: 0.8;">NETWORK STATUS: <span style="color:#2ecc71;">ONLINE</span></div>
 </header>
 
 <div id="orders"></div>
@@ -96,35 +107,24 @@ const API = "https://app1-backend-production-7e08.up.railway.app";
 const token = localStorage.getItem("token");
 
 if(!token){
-    window.location.href = "index.html";
-}
-
-// ✅ CHECK ROLE
-try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    if(payload.role !== "ADMIN"){
-        alert("Admins only");
-        localStorage.clear();
-        window.location.href = "index.html";
-    }
-} catch(e){
-    localStorage.clear();
+    alert("No token");
     window.location.href = "index.html";
 }
 
 // 🍽️ LOAD ORDERS
 function loadOrders(){
 
-    const container = document.getElementById("orders");
+    console.log("TOKEN:", token);
 
     fetch(API + "/orders", {
         headers: {
-            "Authorization": "Bearer " + token
+            "Authorization": `Bearer ${token}`
         }
     })
     .then(res => {
 
         if(res.status === 401 || res.status === 403){
+            alert("Session expired");
             localStorage.clear();
             window.location.href = "index.html";
             return;
@@ -136,11 +136,11 @@ function loadOrders(){
 
         if(!data) return;
 
+        const container = document.getElementById("orders");
         container.innerHTML = "";
 
         if(data.length === 0){
-            container.innerHTML =
-                "<h2 style='grid-column: 1/-1; text-align:center; opacity: 0.3; margin-top: 50px;'>NO PENDING ORDERS</h2>";
+            container.innerHTML = "<h2>No Orders</h2>";
             return;
         }
 
@@ -167,21 +167,53 @@ function loadOrders(){
                 .join("");
 
             div.innerHTML = `
-                <div class="order-header"><h2>TABLE ${table}</h2></div>
-                <div class="order-body"><ul>${productsHTML}</ul></div>
+                <div class="order-header">
+                    <h2>TABLE ${table}</h2>
+                </div>
+                <div class="order-body">
+                    <ul>${productsHTML}</ul>
+                </div>
+                <button class="ready-btn" onclick="markReady(${table}, this)">
+                    READY
+                </button>
             `;
 
             container.appendChild(div);
         }
     })
-    .catch(err => console.error("Fetch error:", err));
+    .catch(err => console.error(err));
 }
 
+// 🔥 DELETE ORDER
+function markReady(tableNumber, button){
+
+    const token = localStorage.getItem("token");
+
+    fetch(API + "/orders/table/" + tableNumber, {
+        method: "DELETE",
+        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    })
+    .then(res => {
+        if(!res.ok){
+            throw new Error("Delete failed");
+        }
+
+        console.log("Deleted table:", tableNumber);
+
+        // 🔥 remove instantly from UI
+        const card = button.parentElement;
+        card.remove();
+    })
+    .catch(err => console.error(err));
+}
+
+// 🚀 AUTO REFRESH
 loadOrders();
 setInterval(loadOrders, 3000);
 
 </script>
-
 
 </body>
 </html>
