@@ -167,6 +167,8 @@ function loadOrders() {
     })
     .then(data => {
 
+         console.log("RAW DATA:", JSON.stringify(data));
+
         if (!data) return;
 
         const container = document.getElementById("orders");
