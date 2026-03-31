@@ -137,6 +137,7 @@
 <script>
 
 const API = "https://app1-backend-production-7e08.up.railway.app";
+const hiddenTables = new Set();
 
 // 🔐 AUTH CHECK
 const token = localStorage.getItem("token");
@@ -166,8 +167,6 @@ function loadOrders() {
         return res.json();
     })
     .then(data => {
-
-         console.log("RAW DATA:", JSON.stringify(data));
 
         if (!data) return;
 
@@ -203,6 +202,7 @@ function loadOrders() {
         });
 
         for (let table in tables) {
+            if (hiddenTables.has(String(table))) continue;
 
             let div = document.createElement("div");
             div.className = "order-card";
@@ -254,19 +254,11 @@ function loadOrders() {
 
 // 🔥 DELETE ORDER
 function markReady(tableNumber, button) {
+    const card = button.parentElement;
+    card.remove();
 
-    fetch(API + "/orders/table/" + tableNumber, {
-        method: "DELETE",
-        headers: {
-            "Authorization": `Bearer ${token}`
-        }
-    })
-    .then(res => {
-        if (!res.ok) throw new Error("Delete failed");
-        const card = button.parentElement;
-        card.remove();
-    })
-    .catch(err => console.error(err));
+    // optional: remember hidden tables during this browser session
+    hiddenTables.add(String(tableNumber));
 }
 
 // 🚀 AUTO REFRESH
