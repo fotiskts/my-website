@@ -137,7 +137,6 @@
 <script>
 
 const API = "https://app1-backend-production-7e08.up.railway.app";
-const hiddenTables = new Set();
 
 // 🔐 AUTH CHECK
 const token = localStorage.getItem("token");
@@ -150,7 +149,7 @@ if (!token) {
 // 🍽️ LOAD ORDERS
 function loadOrders() {
 
-    fetch(API + "/orders", {
+    fetch(API + "/orders/kitchen", {
         headers: {
             "Authorization": `Bearer ${token}`
         }
@@ -192,20 +191,22 @@ function loadOrders() {
 
                 order.items.forEach(item => {
                     tables[tableNum].push({
-                        productName: item.productName,
-                        quantity:    item.quantity,
-                        materials:   item.materials || []
-                    });
+                    orderId: order.id,
+                    productName: item.productName,
+                    quantity: item.quantity,
+                    materials: item.materials || []
+                });
                 });
 
             }
         });
 
         for (let table in tables) {
-            if (hiddenTables.has(String(table))) continue;
 
             let div = document.createElement("div");
             div.className = "order-card";
+
+            const orderId = tables[table][0].orderId;
 
             // Build product + materials HTML
             let productsHTML = tables[table].map(item => {
@@ -241,7 +242,7 @@ function loadOrders() {
                 <div class="order-body">
                     <ul>${productsHTML}</ul>
                 </div>
-                <button class="ready-btn" onclick="markReady(${table}, this)">
+               <button class="ready-btn" onclick="markReady(${orderId})">
                     READY
                 </button>
             `;
@@ -252,13 +253,20 @@ function loadOrders() {
     .catch(err => console.error(err));
 }
 
-// 🔥 DELETE ORDER
-function markReady(tableNumber, button) {
-    const card = button.parentElement;
-    card.remove();
+// Ready order
+function markReady(orderId) {
 
-    // optional: remember hidden tables during this browser session
-    hiddenTables.add(String(tableNumber));
+    fetch(API + "/orders/" + orderId + "/status?status=READY", {
+        method: "PUT",
+        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    })
+    .then(res => {
+        if (!res.ok) throw new Error("Update failed");
+        loadOrders();
+    })
+    .catch(err => console.error(err));
 }
 
 // 🚀 AUTO REFRESH
