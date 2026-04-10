@@ -6,7 +6,7 @@
     <title>Kitchen Login</title>
     <style>
         :root {
-            --primary: #3498db; /* New Blue */
+            --primary: #3498db;
             --bg: #1a1a1a;
             --card: #2c2c2c;
             --text: #ffffff;
@@ -58,41 +58,74 @@
             margin-top: 10px;
         }
         button:hover { background: #2980b9; }
+        .error {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
-
+ 
 <div class="login-box">
     <h2>KITCHEN LOGIN</h2>
     <input id="username" placeholder="Username">
     <input id="password" type="password" placeholder="Password">
+    <p id="errorMsg" class="error"></p>
     <button onclick="login()">SIGN IN</button>
 </div>
-
+ 
 <script>
-function login(){
-    const username = document.getElementById("username").value;
-    const password = document.getElementById("password").value;
-
+function login() {
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const errorMsg = document.getElementById("errorMsg");
+ 
+    errorMsg.style.display = "none";
+ 
     fetch("https://app1-backend-production-7e08.up.railway.app/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
     })
     .then(res => {
-        if(!res.ok) throw new Error("Wrong credentials");
+        if (!res.ok) throw new Error("Wrong credentials");
         return res.json();
     })
     .then(data => {
-
-        // ✅ ΑΠΟΘΗΚΕΥΣΗ TOKEN
-        localStorage.setItem("token", data.token);
-
-        // 👉 redirect
+        const token = data.token;
+ 
+        //  Αποκωδικοποίηση JWT για έλεγχο ρόλου
+        const parts   = token.split(".");
+        const payload = JSON.parse(atob(parts[1]));
+        const role    = payload.role;
+ 
+        //  Μόνο ADMIN και KITCHEN έχουν πρόσβαση στο web
+        if (role !== "ADMIN" && role !== "KITCHEN") {
+            errorMsg.textContent = "Δεν έχεις πρόσβαση στο web app. Χρησιμοποίησε το Android app.";
+            errorMsg.style.display = "block";
+            return;
+        }
+ 
+        //  Αποθήκευση token και role
+        localStorage.setItem("token", token);
+        localStorage.setItem("role", role);
+ 
+        //  Redirect στο kitchen
         window.location.href = "Kitchen.html";
     })
-    .catch(err => alert("Λάθος username ή password"));
+    .catch(() => {
+        errorMsg.textContent = "Λάθος username ή password";
+        errorMsg.style.display = "block";
+    });
 }
+ 
+// ✅ Login με Enter
+document.addEventListener("keydown", e => {
+    if (e.key === "Enter") login();
+});
 </script>
 </body>
 </html>
+ 

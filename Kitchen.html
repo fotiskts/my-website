@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Kitchen Display System</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
         :root {
             --bg: #0d1117;
@@ -13,7 +14,9 @@
             --ready-color: #27ae60;
             --served-color: #8b949e;
         }
- 
+
+        * { box-sizing: border-box; }
+
         body {
             font-family: 'Segoe UI', sans-serif;
             background: var(--bg);
@@ -21,7 +24,7 @@
             margin: 0;
             padding: 20px;
         }
- 
+
         header {
             display: flex;
             justify-content: space-between;
@@ -30,19 +33,38 @@
             padding-bottom: 10px;
             margin-bottom: 20px;
         }
- 
+
         h1 {
             margin: 0;
             font-size: 24px;
             color: var(--highlight);
         }
- 
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-badge {
+            font-size: 12px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .status-live    { background: #27ae60; }
+        .status-offline { background: #e74c3c; }
+
+        #lastUpdate { font-size: 13px; color: #484f58; }
+
         #orders {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
         }
- 
+
         .order-card {
             background: var(--card-bg);
             border-radius: 8px;
@@ -51,84 +73,62 @@
             flex-direction: column;
             border-top: 5px solid var(--highlight);
         }
- 
+
         .order-header {
             padding: 15px;
             background: #21262d;
         }
- 
-        .order-header h2 {
-            margin: 0;
-            font-size: 18px;
-        }
- 
-        .order-body {
-            padding: 15px;
-            flex: 1;
-        }
- 
-        ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
- 
-        /* ── Item row ── */
+
+        .order-header h2 { margin: 0; font-size: 18px; }
+
+        .order-body { padding: 15px; flex: 1; }
+
+        ul { list-style: none; padding: 0; margin: 0; }
+
         li.product-item {
             padding: 10px 0;
             border-bottom: 1px solid #30363d;
             transition: opacity 0.3s;
         }
- 
-        li.product-item.status-ready {
-            opacity: 0.5;
-        }
- 
-        li.product-item.status-served {
-            opacity: 0.25;
-            text-decoration: line-through;
-        }
- 
+
+        li.product-item.status-READY  { opacity: 0.5; }
+        li.product-item.status-SERVED { opacity: 0.25; text-decoration: line-through; }
+
         .product-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 8px;
         }
- 
+
         .product-info {
             display: flex;
             align-items: center;
             gap: 10px;
             flex: 1;
         }
- 
+
         .qty-badge {
             color: var(--highlight);
             font-weight: bold;
             font-size: 18px;
             min-width: 32px;
         }
- 
-        .product-name-text {
-            font-size: 15px;
-            font-weight: 600;
-        }
- 
-        /* ── Status badge ── */
-        .status-badge {
+
+        .product-name-text { font-size: 15px; font-weight: 600; }
+
+        .badge {
             font-size: 11px;
             padding: 2px 8px;
             border-radius: 12px;
             font-weight: bold;
             text-transform: uppercase;
         }
- 
-        .badge-PENDING  { background: #e6a817; color: #000; }
-        .badge-READY    { background: var(--ready-color); color: #fff; }
-        .badge-SERVED   { background: #484f58; color: #ccc; }
- 
-        /* ── Action button ── */
+
+        .badge-PENDING { background: #e6a817; color: #000; }
+        .badge-READY   { background: var(--ready-color); color: #fff; }
+        .badge-SERVED  { background: #484f58; color: #ccc; }
+
         .item-btn {
             border: none;
             padding: 6px 14px;
@@ -136,42 +136,53 @@
             font-weight: bold;
             border-radius: 6px;
             font-size: 13px;
+            color: white;
             transition: 0.2s;
             white-space: nowrap;
         }
- 
-        .btn-ready  { background: var(--ready-color); color: white; }
+
+        .btn-ready  { background: var(--ready-color); }
         .btn-ready:hover  { background: #2ecc71; }
- 
-        .btn-served { background: var(--accent); color: white; }
+        .btn-served { background: var(--accent); }
         .btn-served:hover { background: var(--highlight); }
- 
-        /* ── Materials ── */
+
+        /* ✅ Comment */
+        .item-comment {
+            margin: 6px 0 0 42px;
+            font-size: 12px;
+            color: #f59e0b;
+            font-style: italic;
+        }
+
+        /* ✅ Excluded materials */
+        .item-excluded {
+            margin: 4px 0 0 42px;
+            font-size: 12px;
+            color: #ef4444;
+        }
+
+        /* Materials */
         .materials-list {
             margin: 6px 0 0 42px;
             padding: 0;
             list-style: none;
         }
- 
+
         .materials-list li {
             font-size: 12px;
             color: #8b949e;
             padding: 2px 0;
             border-bottom: none;
         }
- 
-        .materials-list li::before {
-            content: "→ ";
-            color: var(--highlight);
-        }
- 
+
+        .materials-list li::before { content: "→ "; color: var(--highlight); }
+
         .no-materials {
             font-size: 12px;
             color: #484f58;
             margin: 4px 0 0 42px;
         }
- 
-        /* ── Empty state ── */
+
         .empty {
             grid-column: 1/-1;
             text-align: center;
@@ -181,167 +192,197 @@
         }
     </style>
 </head>
- 
+
 <body>
- 
+
 <header>
-    <h1> KITCHEN DISPLAY</h1>
-    <span id="lastUpdate" style="font-size:13px; color:#484f58;"></span>
+    <h1>🍽 KITCHEN DISPLAY</h1>
+    <div class="header-right">
+        <span id="wsStatus" class="status-badge status-offline">○ OFFLINE</span>
+        <span id="lastUpdate"></span>
+    </div>
 </header>
- 
+
 <div id="orders"></div>
- 
+
 <script>
- 
-const API   = "https://app1-backend-production-7e08.up.railway.app";
-const token = localStorage.getItem("token");
- 
+const API   = 'https://app-backend-production-08b6.up.railway.app';
+const token = localStorage.getItem('token');
+
 if (!token) {
-    alert("No token — please login first.");
-    window.location.href = "index.html";
+    alert('No token — please login first.');
+    window.location.href = 'index.html';
 }
- 
+
 // ══════════════════════════════════════════════
-//  LOAD  — GET /kitchen  (PENDING items)
-//          GET /kitchen/ready  (READY items)
-//  Και τα δύο μαζί, ώστε να βλέπεις όλη την κατάσταση
+//  Socket.io
+// ══════════════════════════════════════════════
+const socket = io(API, {
+    path: '/ws',
+    transports: ['websocket', 'polling'],
+    auth: { token },
+});
+
+socket.on('connect', () => {
+    console.log('✅ WebSocket connected');
+    const badge = document.getElementById('wsStatus');
+    badge.textContent = '● LIVE';
+    badge.className = 'status-badge status-live';
+});
+
+socket.on('disconnect', () => {
+    const badge = document.getElementById('wsStatus');
+    badge.textContent = '○ OFFLINE';
+    badge.className = 'status-badge status-offline';
+});
+
+// Νέα παραγγελία → φόρτωσε ξανά
+socket.on('newOrder', () => {
+    loadOrders();
+});
+
+// Item status update → ενημέρωσε τοπικά
+socket.on('kitchen', (updatedItem) => {
+    loadOrders();
+});
+
+// ══════════════════════════════════════════════
+//  LOAD
 // ══════════════════════════════════════════════
 function loadOrders() {
- 
     Promise.all([
-        fetchJSON("/kitchen"),
-        fetchJSON("/kitchen/ready")
+        fetchJSON('/kitchen'),
+        fetchJSON('/kitchen/ready'),
     ])
     .then(([pending, ready]) => {
- 
         const all = [...(pending || []), ...(ready || [])];
         render(all);
- 
-        document.getElementById("lastUpdate").textContent =
-            "Updated: " + new Date().toLocaleTimeString();
+        document.getElementById('lastUpdate').textContent =
+            'Updated: ' + new Date().toLocaleTimeString();
     })
     .catch(err => console.error(err));
 }
- 
+
 function fetchJSON(path) {
     return fetch(API + path, {
-        headers: { "Authorization": `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
     })
     .then(res => {
         if (res.status === 401 || res.status === 403) {
-            alert("Session expired");
+            alert('Session expired');
             localStorage.clear();
-            window.location.href = "index.html";
+            window.location.href = 'index.html';
         }
         return res.json();
     });
 }
- 
+
 // ══════════════════════════════════════════════
-//  RENDER — group items by tableNumber
+//  RENDER
 // ══════════════════════════════════════════════
 function render(items) {
- 
-    const container = document.getElementById("orders");
-    container.innerHTML = "";
- 
+    const container = document.getElementById('orders');
+    container.innerHTML = '';
+
     if (!items || items.length === 0) {
         container.innerHTML = `<div class="empty">No pending orders</div>`;
         return;
     }
- 
-    // Group by tableNumber
+
     const tables = {};
     items.forEach(item => {
-        const t = item.tableNumber ?? "?";
+        const t = item.tableNumber ?? '?';
         if (!tables[t]) tables[t] = [];
         tables[t].push(item);
     });
- 
-    // Sort tables numerically
+
     Object.keys(tables)
         .sort((a, b) => Number(a) - Number(b))
         .forEach(tableNum => {
- 
-            const card = document.createElement("div");
-            card.className = "order-card";
- 
-            const itemsHTML = tables[tableNum].map(item => buildItemHTML(item)).join("");
- 
+            const card = document.createElement('div');
+            card.className = 'order-card';
+            const itemsHTML = tables[tableNum].map(item => buildItemHTML(item)).join('');
             card.innerHTML = `
-                <div class="order-header">
-                    <h2>TABLE ${tableNum}</h2>
-                </div>
-                <div class="order-body">
-                    <ul>${itemsHTML}</ul>
-                </div>
+                <div class="order-header"><h2>TABLE ${tableNum}</h2></div>
+                <div class="order-body"><ul>${itemsHTML}</ul></div>
             `;
- 
             container.appendChild(card);
         });
 }
- 
+
 // ══════════════════════════════════════════════
-//  BUILD HTML για ένα item
+//  BUILD ITEM HTML
 // ══════════════════════════════════════════════
 function buildItemHTML(item) {
- 
-    const status = item.status || "PENDING";
- 
-    // Κουμπί ανάλογα με status
-    let btnHTML = "";
-    if (status === "PENDING") {
+    const status = item.status || 'PENDING';
+
+    let btnHTML = '';
+    if (status === 'PENDING') {
         btnHTML = `<button class="item-btn btn-ready" onclick="updateStatus(${item.id}, 'READY')">✓ READY</button>`;
-    } else if (status === "READY") {
+    } else if (status === 'READY') {
         btnHTML = `<button class="item-btn btn-served" onclick="updateStatus(${item.id}, 'SERVED')">🍽 SERVED</button>`;
     }
- 
-    // Materials
-    let materialsHTML = "";
-    if (item.materials && item.materials.length > 0) {
-        const mats = item.materials.map(m => `<li>${m.name}</li>`).join("");
+
+    // ✅ Comment
+    let commentHTML = '';
+    if (item.comment) {
+        commentHTML = `<div class="item-comment">💬 ${item.comment}</div>`;
+    }
+
+    // ✅ Excluded materials
+    let excludedHTML = '';
+    if (item.excludedMaterials && item.excludedMaterials.length > 0) {
+        excludedHTML = `<div class="item-excluded">✕ Χωρίς: ${item.excludedMaterials.join(', ')}</div>`;
+    }
+
+    // Materials (χωρίς τα excluded)
+    let materialsHTML = '';
+    const excluded = item.excludedMaterials || [];
+    const visibleMaterials = (item.materials || []).filter(m => !excluded.includes(m.name));
+
+    if (visibleMaterials.length > 0) {
+        const mats = visibleMaterials.map(m => `<li>${m.name}</li>`).join('');
         materialsHTML = `<ul class="materials-list">${mats}</ul>`;
     } else {
         materialsHTML = `<p class="no-materials">No materials</p>`;
     }
- 
+
     return `
         <li class="product-item status-${status}" id="item-${item.id}">
             <div class="product-row">
                 <div class="product-info">
                     <span class="qty-badge">x${item.quantity}</span>
                     <span class="product-name-text">${item.productName}</span>
-                    <span class="status-badge badge-${status}">${status}</span>
+                    <span class="badge badge-${status}">${status}</span>
                 </div>
                 ${btnHTML}
             </div>
+            ${commentHTML}
+            ${excludedHTML}
             ${materialsHTML}
         </li>
     `;
 }
- 
+
 // ══════════════════════════════════════════════
-//  UPDATE STATUS — PUT /kitchen/items/{id}/status
+//  UPDATE STATUS
 // ══════════════════════════════════════════════
 function updateStatus(itemId, newStatus) {
- 
     fetch(`${API}/kitchen/items/${itemId}/status?status=${newStatus}`, {
-        method: "PUT",
-        headers: { "Authorization": `Bearer ${token}` }
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` },
     })
     .then(res => {
-        if (!res.ok) throw new Error("Update failed: " + res.status);
-        loadOrders(); // Refresh μετά την αλλαγή
+        if (!res.ok) throw new Error('Update failed: ' + res.status);
+        loadOrders();
     })
     .catch(err => console.error(err));
 }
- 
+
 // ══════════════════════════════════════════════
-//  AUTO REFRESH κάθε 5 δευτερόλεπτα
+//  INITIAL LOAD
 // ══════════════════════════════════════════════
 loadOrders();
-setInterval(loadOrders, 5000);
- 
 </script>
 </body>
 </html>
