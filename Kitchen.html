@@ -14,9 +14,9 @@
             --ready-color: #27ae60;
             --served-color: #8b949e;
         }
-
+ 
         * { box-sizing: border-box; }
-
+ 
         body {
             font-family: 'Segoe UI', sans-serif;
             background: var(--bg);
@@ -24,7 +24,7 @@
             margin: 0;
             padding: 20px;
         }
-
+ 
         header {
             display: flex;
             justify-content: space-between;
@@ -33,19 +33,19 @@
             padding-bottom: 10px;
             margin-bottom: 20px;
         }
-
+ 
         h1 {
             margin: 0;
             font-size: 24px;
             color: var(--highlight);
         }
-
+ 
         .header-right {
             display: flex;
             align-items: center;
             gap: 12px;
         }
-
+ 
         .status-badge {
             font-size: 12px;
             padding: 3px 10px;
@@ -53,18 +53,18 @@
             font-weight: bold;
             color: #fff;
         }
-
+ 
         .status-live    { background: #27ae60; }
         .status-offline { background: #e74c3c; }
-
+ 
         #lastUpdate { font-size: 13px; color: #484f58; }
-
+ 
         #orders {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
         }
-
+ 
         .order-card {
             background: var(--card-bg);
             border-radius: 8px;
@@ -73,50 +73,50 @@
             flex-direction: column;
             border-top: 5px solid var(--highlight);
         }
-
+ 
         .order-header {
             padding: 15px;
             background: #21262d;
         }
-
+ 
         .order-header h2 { margin: 0; font-size: 18px; }
-
+ 
         .order-body { padding: 15px; flex: 1; }
-
+ 
         ul { list-style: none; padding: 0; margin: 0; }
-
+ 
         li.product-item {
             padding: 10px 0;
             border-bottom: 1px solid #30363d;
             transition: opacity 0.3s;
         }
-
+ 
         li.product-item.status-READY  { opacity: 0.5; }
         li.product-item.status-SERVED { opacity: 0.25; text-decoration: line-through; }
-
+ 
         .product-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 8px;
         }
-
+ 
         .product-info {
             display: flex;
             align-items: center;
             gap: 10px;
             flex: 1;
         }
-
+ 
         .qty-badge {
             color: var(--highlight);
             font-weight: bold;
             font-size: 18px;
             min-width: 32px;
         }
-
+ 
         .product-name-text { font-size: 15px; font-weight: 600; }
-
+ 
         .badge {
             font-size: 11px;
             padding: 2px 8px;
@@ -124,11 +124,11 @@
             font-weight: bold;
             text-transform: uppercase;
         }
-
+ 
         .badge-PENDING { background: #e6a817; color: #000; }
         .badge-READY   { background: var(--ready-color); color: #fff; }
         .badge-SERVED  { background: #484f58; color: #ccc; }
-
+ 
         .item-btn {
             border: none;
             padding: 6px 14px;
@@ -140,12 +140,12 @@
             transition: 0.2s;
             white-space: nowrap;
         }
-
+ 
         .btn-ready  { background: var(--ready-color); }
         .btn-ready:hover  { background: #2ecc71; }
         .btn-served { background: var(--accent); }
         .btn-served:hover { background: var(--highlight); }
-
+ 
         /* ✅ Comment */
         .item-comment {
             margin: 6px 0 0 42px;
@@ -153,36 +153,43 @@
             color: #f59e0b;
             font-style: italic;
         }
-
+ 
         /* ✅ Excluded materials */
         .item-excluded {
             margin: 4px 0 0 42px;
             font-size: 12px;
             color: #ef4444;
         }
-
+ 
+        /* ✅ Selected options */
+        .item-options {
+            margin: 4px 0 0 42px;
+            font-size: 12px;
+            color: #a78bfa;
+        }
+ 
         /* Materials */
         .materials-list {
             margin: 6px 0 0 42px;
             padding: 0;
             list-style: none;
         }
-
+ 
         .materials-list li {
             font-size: 12px;
             color: #8b949e;
             padding: 2px 0;
             border-bottom: none;
         }
-
+ 
         .materials-list li::before { content: "→ "; color: var(--highlight); }
-
+ 
         .no-materials {
             font-size: 12px;
             color: #484f58;
             margin: 4px 0 0 42px;
         }
-
+ 
         .empty {
             grid-column: 1/-1;
             text-align: center;
@@ -192,9 +199,9 @@
         }
     </style>
 </head>
-
+ 
 <body>
-
+ 
 <header>
     <h1>🍽 KITCHEN DISPLAY</h1>
     <div class="header-right">
@@ -202,18 +209,18 @@
         <span id="lastUpdate"></span>
     </div>
 </header>
-
+ 
 <div id="orders"></div>
-
+ 
 <script>
 const API   = 'https://app-backend-production-08b6.up.railway.app';
 const token = localStorage.getItem('token');
-
+ 
 if (!token) {
     alert('No token — please login first.');
     window.location.href = 'index.html';
 }
-
+ 
 // ══════════════════════════════════════════════
 //  Socket.io
 // ══════════════════════════════════════════════
@@ -222,30 +229,30 @@ const socket = io(API, {
     transports: ['websocket', 'polling'],
     auth: { token },
 });
-
+ 
 socket.on('connect', () => {
     console.log('✅ WebSocket connected');
     const badge = document.getElementById('wsStatus');
     badge.textContent = '● LIVE';
     badge.className = 'status-badge status-live';
 });
-
+ 
 socket.on('disconnect', () => {
     const badge = document.getElementById('wsStatus');
     badge.textContent = '○ OFFLINE';
     badge.className = 'status-badge status-offline';
 });
-
+ 
 // Νέα παραγγελία → φόρτωσε ξανά
 socket.on('newOrder', () => {
     loadOrders();
 });
-
+ 
 // Item status update → ενημέρωσε τοπικά
 socket.on('kitchen', (updatedItem) => {
     loadOrders();
 });
-
+ 
 // ══════════════════════════════════════════════
 //  LOAD
 // ══════════════════════════════════════════════
@@ -262,7 +269,7 @@ function loadOrders() {
     })
     .catch(err => console.error(err));
 }
-
+ 
 function fetchJSON(path) {
     return fetch(API + path, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -276,26 +283,26 @@ function fetchJSON(path) {
         return res.json();
     });
 }
-
+ 
 // ══════════════════════════════════════════════
 //  RENDER
 // ══════════════════════════════════════════════
 function render(items) {
     const container = document.getElementById('orders');
     container.innerHTML = '';
-
+ 
     if (!items || items.length === 0) {
         container.innerHTML = `<div class="empty">No pending orders</div>`;
         return;
     }
-
+ 
     const tables = {};
     items.forEach(item => {
         const t = item.tableNumber ?? '?';
         if (!tables[t]) tables[t] = [];
         tables[t].push(item);
     });
-
+ 
     Object.keys(tables)
         .sort((a, b) => Number(a) - Number(b))
         .forEach(tableNum => {
@@ -309,44 +316,51 @@ function render(items) {
             container.appendChild(card);
         });
 }
-
+ 
 // ══════════════════════════════════════════════
 //  BUILD ITEM HTML
 // ══════════════════════════════════════════════
 function buildItemHTML(item) {
     const status = item.status || 'PENDING';
-
+ 
     let btnHTML = '';
     if (status === 'PENDING') {
         btnHTML = `<button class="item-btn btn-ready" onclick="updateStatus(${item.id}, 'READY')">✓ READY</button>`;
     } else if (status === 'READY') {
         btnHTML = `<button class="item-btn btn-served" onclick="updateStatus(${item.id}, 'SERVED')">🍽 SERVED</button>`;
     }
-
+ 
     // ✅ Comment
     let commentHTML = '';
     if (item.comment) {
         commentHTML = `<div class="item-comment">💬 ${item.comment}</div>`;
     }
-
+ 
     // ✅ Excluded materials
     let excludedHTML = '';
     if (item.excludedMaterials && item.excludedMaterials.length > 0) {
         excludedHTML = `<div class="item-excluded">✕ Χωρίς: ${item.excludedMaterials.join(', ')}</div>`;
     }
-
+ 
+    // ✅ Selected options
+    let optionsHTML = '';
+    if (item.selectedOptions && item.selectedOptions.length > 0) {
+        const opts = item.selectedOptions.map(o => `${o.optionName}: ${o.selectedChoice}`).join(' · ');
+        optionsHTML = `<div class="item-options">⚙ ${opts}</div>`;
+    }
+ 
     // Materials (χωρίς τα excluded)
     let materialsHTML = '';
     const excluded = item.excludedMaterials || [];
     const visibleMaterials = (item.materials || []).filter(m => !excluded.includes(m.name));
-
+ 
     if (visibleMaterials.length > 0) {
         const mats = visibleMaterials.map(m => `<li>${m.name}</li>`).join('');
         materialsHTML = `<ul class="materials-list">${mats}</ul>`;
     } else {
         materialsHTML = `<p class="no-materials">No materials</p>`;
     }
-
+ 
     return `
         <li class="product-item status-${status}" id="item-${item.id}">
             <div class="product-row">
@@ -358,12 +372,13 @@ function buildItemHTML(item) {
                 ${btnHTML}
             </div>
             ${commentHTML}
+            ${optionsHTML}
             ${excludedHTML}
             ${materialsHTML}
         </li>
     `;
 }
-
+ 
 // ══════════════════════════════════════════════
 //  UPDATE STATUS
 // ══════════════════════════════════════════════
@@ -378,7 +393,7 @@ function updateStatus(itemId, newStatus) {
     })
     .catch(err => console.error(err));
 }
-
+ 
 // ══════════════════════════════════════════════
 //  INITIAL LOAD
 // ══════════════════════════════════════════════
