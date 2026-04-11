@@ -84,7 +84,7 @@ function login() {
  
     errorMsg.style.display = "none";
  
-    fetch("https://app-backend-production-08b6.up.railway.app/", {
+    fetch("https://app-backend-production-08b6.up.railway.app/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
